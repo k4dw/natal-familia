@@ -32,7 +32,7 @@
   <div class="luzes" aria-hidden="true"></div>
   <div class="topo-dentro">
     <div>
-      <h1 id="familia-nome" class="nome-familia">Natal em Família</h1>
+      <h1 id="familia-nome">Natal em Família</h1>
       <p>Conte o que você quer ganhar no amigo oculto e o que vai levar para a ceia.</p>
     </div>
     <div class="topo-lado">
@@ -261,8 +261,8 @@
     };
     $("resumo").replaceChildren(
       pilula(pessoas.length, "pessoa", "pessoas"),
-      pilula(salgados.length, "prato salgado", "pratos salgados"),
-      pilula(doces.length, "prato doce", "pratos doces")
+      pilula(salgados.length, "salgado", "salgados"),
+      pilula(doces.length, "doce", "doces")
     );
 
     // Listas de desejos

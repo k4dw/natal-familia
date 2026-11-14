@@ -162,7 +162,6 @@
   }
 
   function desenhar() {
-    $("titulo").classList.remove("nome-familia");
     if (!conta) {
       $("titulo").textContent = "Natal em Família";
       mostrar("tela-conta");
@@ -176,7 +175,6 @@
     }
     const url = location.origin + "/f/" + conta.familia.id;
     $("titulo").textContent = conta.familia.nome;
-    $("titulo").classList.add("nome-familia");
     $("subtitulo").textContent = "Painel de quem organiza o Natal da família.";
     $("link").value = url;
     $("abrir").href = url;
