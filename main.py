@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -492,4 +492,53 @@ def pagina_familia(fid: str) -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "familia.html", headers=SEM_CACHE)
 
 
+# ---- instalação (PWA)
+
+def manifesto(nome: str, inicio: str) -> JSONResponse:
+    def icone(arq: str, tam: int, uso: str) -> dict:
+        return {"src": f"/static/icones/{arq}", "sizes": f"{tam}x{tam}", "type": "image/png", "purpose": uso}
+
+    return JSONResponse(
+        {
+            "name": nome,
+            "short_name": nome[:24],
+            "description": "Amigo oculto e ceia de Natal da família.",
+            "lang": "pt-BR",
+            "id": inicio,
+            "start_url": inicio,
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#F3F6F4",
+            "theme_color": "#0F3D2E",
+            "icons": [
+                icone("icone-192.png", 192, "any"),
+                icone("icone-512.png", 512, "any"),
+                icone("icone-maskable-512.png", 512, "maskable"),
+            ],
+        },
+        media_type="application/manifest+json",
+        headers=SEM_CACHE,
+    )
+
+
+@app.get("/manifest.webmanifest")
+def manifesto_conta() -> JSONResponse:
+    return manifesto("Natal em Família", "/")
+
+
+@app.get("/f/{fid}/manifest.webmanifest")
+def manifesto_familia(fid: str) -> JSONResponse:
+    """Cada família instala o app abrindo direto na própria página."""
+    with closing(conectar()) as con:
+        f = buscar_familia(con, fid)
+    return manifesto(f["nome"], f"/f/{fid}")
+
+
+@app.get("/sw.js")
+def service_worker() -> FileResponse:
+    # Servido na raiz para o service worker valer para o site todo.
+    return FileResponse(BASE_DIR / "static" / "sw.js", media_type="text/javascript", headers=SEM_CACHE)
+
+
+app.mount("/font", StaticFiles(directory=BASE_DIR / "font"), name="font")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

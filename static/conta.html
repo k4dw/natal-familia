@@ -7,6 +7,10 @@
 <meta name="description" content="Organize o amigo oculto e a ceia de Natal da sua família com um link só.">
 <meta name="theme-color" content="#0F3D2E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F3D2E'/%3E%3Cpath d='M16 5l6 8h-3l5 7h-4l5 6H7l5-6H8l5-7h-3z' fill='%23F4F7F5'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/static/icones/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
@@ -158,6 +162,7 @@
   }
 
   function desenhar() {
+    $("titulo").classList.remove("nome-familia");
     if (!conta) {
       $("titulo").textContent = "Natal em Família";
       mostrar("tela-conta");
@@ -171,6 +176,7 @@
     }
     const url = location.origin + "/f/" + conta.familia.id;
     $("titulo").textContent = conta.familia.nome;
+    $("titulo").classList.add("nome-familia");
     $("subtitulo").textContent = "Painel de quem organiza o Natal da família.";
     $("link").value = url;
     $("abrir").href = url;
@@ -288,6 +294,8 @@
     trocarModo("entrar");
     desenhar();
   });
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   (async function iniciar() {
     try { conta = await api("GET", "/api/eu"); } catch (e) { conta = null; }
