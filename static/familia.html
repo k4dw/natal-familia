@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Natal em Família</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Amigo oculto e ceia de Natal da família: diga o que quer ganhar e o que vai levar.">
+<meta name="theme-color" content="#0F3D2E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F3D2E'/%3E%3Cpath d='M16 5l6 8h-3l5 7h-4l5 6H7l5-6H8l5-7h-3z' fill='%23F4F7F5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="luzes" aria-hidden="true"></div>
+  <div class="topo-dentro">
+    <div>
+      <h1 id="familia-nome">Natal em Família</h1>
+      <p>Conte o que você quer ganhar no amigo oculto e o que vai levar para a ceia.</p>
+    </div>
+    <div class="contagem" id="contagem" hidden></div>
+  </div>
+</header>
+
+<div class="estreito" id="entrada">
+  <div class="esqueleto" id="carregando"></div>
+
+  <section class="bloco cartao" id="portao" hidden>
+    <header>
+      <h2>Código da família</h2>
+      <p>Digite o código que veio junto com o link. Só precisa na primeira vez neste aparelho.</p>
+    </header>
+    <form id="form-codigo" novalidate>
+      <div class="campo">
+        <label for="codigo">Código</label>
+        <input type="text" class="entrada" id="codigo" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="erro-codigo">
+        <p class="msg-erro" id="erro-codigo" role="alert"></p>
+      </div>
+      <button type="submit" class="botao" id="entrar">Entrar</button>
+    </form>
+  </section>
+
+  <div class="estado" id="invalido" hidden>
+    <strong>Este link não funciona.</strong>
+    Peça o link de novo para quem organiza o Natal da família.
+  </div>
+</div>
+
+<main id="app" hidden>
+  <form class="formulario cartao" id="form" novalidate>
+    <header>
+      <h2 id="form-titulo">Sua resposta</h2>
+      <p id="form-sub">Leva um minuto. Dá para mudar depois.</p>
+    </header>
+
+    <div class="campo">
+      <label for="nome">Seu nome</label>
+      <input type="text" class="entrada" id="nome" name="nome" maxlength="60" autocomplete="given-name" placeholder="Como a família te chama" aria-describedby="erro-nome">
+      <p class="msg-erro" id="erro-nome" role="alert"></p>
+    </div>
+
+    <div class="aviso" id="aviso-duplicado" hidden>
+      <span id="aviso-texto"></span>
+      <button type="button" class="botao-texto" id="abrir-duplicado"></button>
+    </div>
+
+    <section class="passo" aria-labelledby="t-presentes">
+      <div class="passo-titulo"><span class="passo-num" aria-hidden="true">1</span><h3 id="t-presentes">Amigo oculto</h3></div>
+      <p class="dica">Três opções de presente, da que você mais quer para a que menos quer.</p>
+      <div class="presente"><span aria-hidden="true">1</span><input type="text" class="entrada" id="presente1" maxlength="120" aria-label="Primeira opção de presente" placeholder="Ex.: livro de receitas"></div>
+      <div class="presente"><span aria-hidden="true">2</span><input type="text" class="entrada" id="presente2" maxlength="120" aria-label="Segunda opção de presente" placeholder="Ex.: chinelo tamanho 39"></div>
+      <div class="presente"><span aria-hidden="true">3</span><input type="text" class="entrada" id="presente3" maxlength="120" aria-label="Terceira opção de presente" placeholder="Ex.: caneca térmica"></div>
+    </section>
+
+    <section class="passo" aria-labelledby="t-comida">
+      <div class="passo-titulo"><span class="passo-num" aria-hidden="true">2</span><h3 id="t-comida">O que você leva para a ceia</h3></div>
+      <div class="campo">
+        <label for="comida" class="so-leitor">Prato que você vai levar</label>
+        <input type="text" class="entrada" id="comida" maxlength="120" placeholder="Ex.: farofa, rabanada, pavê">
+      </div>
+    </section>
+
+    <section class="passo" aria-labelledby="t-tipo">
+      <div class="passo-titulo"><span class="passo-num" aria-hidden="true">3</span><h3 id="t-tipo">É doce ou salgado?</h3></div>
+      <fieldset class="escolha" aria-describedby="erro-tipo">
+        <legend class="so-leitor">Tipo do prato</legend>
+        <label><input type="radio" name="tipo" id="tipo-salgada" value="salgada"><span class="marca" aria-hidden="true"></span>Salgado</label>
+        <label><input type="radio" name="tipo" id="tipo-doce" value="doce"><span class="marca" aria-hidden="true"></span>Doce</label>
+      </fieldset>
+      <p class="msg-erro" id="erro-tipo" role="alert"></p>
+    </section>
+
+    <div class="acoes">
+      <p class="msg-erro" id="erro-geral" role="alert"></p>
+      <button type="submit" class="botao" id="salvar">Salvar minha resposta</button>
+      <div class="linha-acoes">
+        <button type="button" class="botao-texto" id="novo" hidden>Responder por outra pessoa</button>
+        <button type="button" class="botao-texto perigo" id="apagar" hidden>Apagar esta resposta</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="listas">
+    <div class="resumo" id="resumo" aria-live="polite"></div>
+
+    <section class="secao" aria-labelledby="t-desejos">
+      <header>
+        <h2 id="t-desejos">Listas de desejos</h2>
+        <p>Tirou alguém no amigo oculto? Procure o nome aqui.</p>
+      </header>
+      <div id="desejos"><div class="esqueleto"></div></div>
+    </section>
+
+    <section class="secao" aria-labelledby="t-mesa">
+      <header>
+        <h2 id="t-mesa">Mesa de Natal</h2>
+        <p>Veja o que já vem para não repetir prato.</p>
+      </header>
+      <div id="mesa"><div class="esqueleto"></div></div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const FID = location.pathname.split("/")[2] || "";
+  const BASE = "/api/f/" + FID;
+  const CHAVE = "natal:meuId:" + FID;
+  const el = (tag, cls, texto) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (texto != null) n.textContent = texto;
+    return n;
+  };
+
+  let pessoas = [];
+  let carregou = false;
+  let editandoId = null;   // id da resposta aberta no formulário
+  let meuId = lerMeuId();
+  let duplicadoId = null;
+  let confirmarApagar = false;
+
+  function lerMeuId() {
+    try { return Number(localStorage.getItem(CHAVE)) || null; } catch (e) { return null; }
+  }
+  function gravarMeuId(id) {
+    meuId = id;
+    try { id ? localStorage.setItem(CHAVE, String(id)) : localStorage.removeItem(CHAVE); } catch (e) {}
+  }
+
+  /* Contagem até o Natal */
+  (function contagem() {
+    const hoje = new Date();
+    const zero = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    let natal = new Date(hoje.getFullYear(), 11, 25);
+    if (zero > natal) natal = new Date(hoje.getFullYear() + 1, 11, 25);
+    const dias = Math.round((natal - zero) / 86400000);
+    const c = $("contagem");
+    if (dias === 0) c.append("Feliz Natal!");
+    else {
+      c.append(dias === 1 ? "Falta" : "Faltam", el("strong", null, String(dias)), dias === 1 ? "dia para o Natal" : "dias para o Natal");
+    }
+    c.hidden = false;
+  })();
+
+  /* API */
+  async function api(metodo, caminho, corpo) {
+    const r = await fetch(caminho, {
+      method: metodo,
+      headers: corpo ? { "Content-Type": "application/json" } : undefined,
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    });
+    if (r.status === 204) return null;
+    let dados = null;
+    try { dados = await r.json(); } catch (e) {}
+    if (!r.ok) {
+      const erro = new Error("http");
+      erro.status = r.status;
+      erro.detalhe = dados && dados.detail;
+      throw erro;
+    }
+    return dados;
+  }
+
+  async function carregar(silencioso) {
+    try {
+      pessoas = await api("GET", BASE + "/participantes");
+      const primeira = !carregou;
+      carregou = true;
+      if (meuId && !pessoas.some((p) => p.id === meuId)) gravarMeuId(null);
+      if (editandoId && !pessoas.some((p) => p.id === editandoId)) limparForm();
+      if (primeira && meuId) abrir(meuId, false);
+      desenhar();
+    } catch (e) {
+      if (e.status === 401) { mostrarPortao(); return; }
+      if (silencioso && carregou) return;
+      erroDeCarga();
+    }
+  }
+
+  function erroDeCarga() {
+    for (const id of ["desejos", "mesa"]) {
+      const caixa = el("div", "estado");
+      caixa.append(el("strong", null, "Não deu para carregar as respostas."), "Confira a internet e tente de novo. ");
+      const b = el("button", "botao-texto", "Tentar de novo");
+      b.type = "button";
+      b.addEventListener("click", () => carregar(false));
+      caixa.append(b);
+      $(id).replaceChildren(caixa);
+    }
+  }
+
+  /* Desenho das listas */
+  function desenhar() {
+    const comPrato = pessoas.filter((p) => p.comida);
+    const salgados = comPrato.filter((p) => p.tipo === "salgada");
+    const doces = comPrato.filter((p) => p.tipo === "doce");
+    const semTipo = comPrato.filter((p) => !p.tipo);
+
+    const pilula = (n, um, varios) => {
+      const s = el("span", "pilula");
+      s.append(el("strong", null, String(n)), n === 1 ? um : varios);
+      return s;
+    };
+    $("resumo").replaceChildren(
+      pilula(pessoas.length, "pessoa respondeu", "pessoas responderam"),
+      pilula(salgados.length, "prato salgado", "pratos salgados"),
+      pilula(doces.length, "prato doce", "pratos doces")
+    );
+
+    // Listas de desejos
+    if (!pessoas.length) {
+      const v = el("div", "estado");
+      v.append(el("strong", null, "Ninguém respondeu ainda."), "Seja a primeira pessoa: preencha o formulário.");
+      $("desejos").replaceChildren(v);
+    } else {
+      const grade = el("div", "grade");
+      for (const p of pessoas) {
+        const cartao = el("article", "pessoa cartao" + (p.id === meuId ? " eu" : ""));
+        const topo = el("div", "pessoa-topo");
+        const h = el("h3", null, p.nome);
+        if (p.id === meuId) h.append(el("span", "etiqueta", "você"));
+        const b = el("button", "botao-texto editar", "Editar");
+        b.type = "button";
+        b.setAttribute("aria-label", "Editar a resposta de " + p.nome);
+        b.addEventListener("click", () => abrir(p.id, true));
+        topo.append(h, b);
+        cartao.append(topo);
+        const itens = p.presentes.filter(Boolean);
+        if (itens.length) {
+          const ol = el("ol");
+          for (const t of itens) ol.append(el("li", null, t));
+          cartao.append(ol);
+        } else {
+          cartao.append(el("p", "vazio-item", "Ainda não disse o que quer ganhar."));
+        }
+        grade.append(cartao);
+      }
+      $("desejos").replaceChildren(grade);
+    }
+
+    // Mesa
+    if (!comPrato.length) {
+      const v = el("div", "estado");
+      v.append(el("strong", null, "A mesa ainda está vazia."), "Os pratos aparecem aqui, separados em salgados e doces.");
+      $("mesa").replaceChildren(v);
+    } else {
+      const mesa = el("div", "mesa");
+      const coluna = (titulo, lista, vazio) => {
+        const c = el("div", "coluna cartao");
+        const h = el("h3", null, titulo);
+        h.append(el("span", null, String(lista.length)));
+        c.append(h);
+        if (!lista.length) { c.append(el("p", "vazio-item", vazio)); return c; }
+        const ul = el("ul");
+        for (const p of lista) {
+          const li = el("li");
+          li.append(el("b", null, p.comida), el("small", null, "quem leva: " + p.nome));
+          ul.append(li);
+        }
+        c.append(ul);
+        return c;
+      };
+      mesa.append(
+        coluna("Salgados", salgados, "Nenhum salgado por enquanto."),
+        coluna("Doces", doces, "Nenhum doce por enquanto.")
+      );
+      if (semTipo.length) mesa.append(coluna("Sem tipo informado", semTipo, ""));
+      $("mesa").replaceChildren(mesa);
+    }
+  }
+
+  /* Formulário */
+  function limparErros() {
+    for (const id of ["erro-nome", "erro-tipo", "erro-geral"]) $(id).textContent = "";
+    $("nome").removeAttribute("aria-invalid");
+    $("aviso-duplicado").hidden = true;
+    duplicadoId = null;
+  }
+  function resetApagar() {
+    confirmarApagar = false;
+    $("apagar").textContent = "Apagar esta resposta";
+  }
+  function atualizarCabecalho() {
+    const p = pessoas.find((x) => x.id === editandoId);
+    resetApagar();
+    if (p) {
+      const minha = p.id === meuId;
+      $("form-titulo").textContent = minha ? "Sua resposta" : "Resposta de " + p.nome;
+      $("form-sub").textContent = minha ? "Mude o que quiser e salve de novo." : "Você está editando a resposta de outra pessoa.";
+      $("salvar").textContent = "Salvar alterações";
+      $("novo").hidden = false;
+      $("novo").textContent = minha ? "Responder por outra pessoa" : "Voltar e criar nova resposta";
+      $("apagar").hidden = false;
+    } else {
+      $("form-titulo").textContent = meuId ? "Nova resposta" : "Sua resposta";
+      $("form-sub").textContent = meuId ? "Preencha por alguém que não usa celular." : "Leva um minuto. Dá para mudar depois.";
+      $("salvar").textContent = meuId ? "Salvar resposta" : "Salvar minha resposta";
+      $("novo").hidden = true;
+      $("apagar").hidden = true;
+    }
+  }
+  function limparForm() {
+    editandoId = null;
+    $("form").reset();
+    limparErros();
+    atualizarCabecalho();
+  }
+  function abrir(id, rolar) {
+    const p = pessoas.find((x) => x.id === id);
+    if (!p) return;
+    editandoId = id;
+    limparErros();
+    $("nome").value = p.nome;
+    $("presente1").value = p.presentes[0] || "";
+    $("presente2").value = p.presentes[1] || "";
+    $("presente3").value = p.presentes[2] || "";
+    $("comida").value = p.comida;
+    $("tipo-salgada").checked = p.tipo === "salgada";
+    $("tipo-doce").checked = p.tipo === "doce";
+    atualizarCabecalho();
+    if (rolar) {
+      $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("nome").focus({ preventScroll: true });
+    }
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("visivel");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("visivel"), 3200);
+  }
+
+  $("form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    limparErros();
+    const nome = $("nome").value.trim();
+    const comida = $("comida").value.trim();
+    const marcado = document.querySelector('input[name="tipo"]:checked');
+    const tipo = marcado ? marcado.value : "";
+
+    if (!nome) {
+      $("erro-nome").textContent = "Escreva seu nome para a família saber de quem é a lista.";
+      $("nome").setAttribute("aria-invalid", "true");
+      $("nome").focus();
+      return;
+    }
+    if (comida && !tipo) {
+      $("erro-tipo").textContent = "Marque se o prato é salgado ou doce.";
+      $("tipo-salgada").focus();
+      return;
+    }
+
+    const corpo = {
+      nome,
+      presentes: [$("presente1").value, $("presente2").value, $("presente3").value],
+      comida,
+      tipo: comida ? tipo : "",
+    };
+    const botao = $("salvar");
+    const rotulo = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "Salvando…";
+    try {
+      const salvo = editandoId
+        ? await api("PUT", BASE + "/participantes/" + editandoId, corpo)
+        : await api("POST", BASE + "/participantes", corpo);
+      if (!editandoId && !meuId) gravarMeuId(salvo.id);
+      editandoId = salvo.id;
+      await carregar(true);
+      if (!pessoas.some((p) => p.id === salvo.id)) pessoas.push(salvo);
+      atualizarCabecalho();
+      desenhar();
+      toast("Resposta de " + salvo.nome + " salva.");
+    } catch (e) {
+      botao.textContent = rotulo;
+      if (e.status === 401) {
+        mostrarPortao();
+      } else if (e.status === 409 && e.detalhe) {
+        duplicadoId = e.detalhe.id;
+        $("aviso-texto").textContent = "Já existe uma resposta com o nome " + nome + ". Se for você, abra e edite. Se for outra pessoa, use nome e sobrenome.";
+        $("abrir-duplicado").textContent = "Abrir a resposta de " + nome;
+        $("aviso-duplicado").hidden = false;
+        await carregar(true);
+      } else if (e.status === 404) {
+        $("erro-geral").textContent = "Essa resposta foi apagada. Salve de novo para criar outra.";
+        editandoId = null;
+        await carregar(true);
+        atualizarCabecalho();
+      } else if (e.status === 422) {
+        $("erro-geral").textContent = "Algum campo ficou longo demais. Encurte o texto e salve de novo.";
+      } else {
+        $("erro-geral").textContent = "Não deu para salvar. Confira a internet e toque em salvar de novo.";
+      }
+    } finally {
+      botao.disabled = false;
+      if (botao.textContent === "Salvando…") atualizarCabecalho();
+    }
+  });
+
+  $("abrir-duplicado").addEventListener("click", () => { if (duplicadoId) abrir(duplicadoId, true); });
+  $("novo").addEventListener("click", () => { limparForm(); $("nome").focus(); });
+
+  $("apagar").addEventListener("click", async () => {
+    if (!editandoId) return;
+    if (!confirmarApagar) {
+      confirmarApagar = true;
+      $("apagar").textContent = "Toque de novo para apagar";
+      setTimeout(resetApagar, 5000);
+      return;
+    }
+    const id = editandoId;
+    try {
+      await api("DELETE", BASE + "/participantes/" + id);
+      if (id === meuId) gravarMeuId(null);
+      limparForm();
+      await carregar(true);
+      toast("Resposta apagada.");
+    } catch (e) {
+      if (e.status === 401) { mostrarPortao(); return; }
+      $("erro-geral").textContent = "Não deu para apagar. Tente de novo.";
+    }
+  });
+
+  /* Entrada: confere o link e pede o código da família quando preciso */
+  let liberado = false;
+  function mostrarSo(id) {
+    for (const x of ["carregando", "portao", "invalido"]) $(x).hidden = x !== id;
+    $("entrada").hidden = !id;
+    $("app").hidden = !!id;
+  }
+  function mostrarPortao() {
+    liberado = false;
+    mostrarSo("portao");
+    $("codigo").focus();
+  }
+  function mostrarApp() {
+    liberado = true;
+    mostrarSo(null);
+    carregar(false);
+  }
+  function nomear(nome) {
+    $("familia-nome").textContent = nome;
+    document.title = nome + " · Natal em Família";
+  }
+  async function iniciar() {
+    try {
+      const info = await api("GET", BASE);
+      nomear(info.nome);
+      info.liberado ? mostrarApp() : mostrarPortao();
+    } catch (e) {
+      if (e.status === 404) { mostrarSo("invalido"); return; }
+      const caixa = $("invalido");
+      caixa.replaceChildren(el("strong", null, "Não deu para abrir a página."), "Confira a internet e recarregue.");
+      mostrarSo("invalido");
+    }
+  }
+  $("form-codigo").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const codigo = $("codigo").value.trim();
+    $("erro-codigo").textContent = "";
+    if (!codigo) { $("erro-codigo").textContent = "Digite o código da família."; $("codigo").focus(); return; }
+    const b = $("entrar");
+    b.disabled = true; b.textContent = "Conferindo…";
+    try {
+      const info = await api("POST", BASE + "/entrar", { codigo });
+      nomear(info.nome);
+      $("codigo").value = "";
+      mostrarApp();
+    } catch (e) {
+      $("erro-codigo").textContent = (e.detalhe && e.detalhe.mensagem) || "Não deu para conferir o código. Tente de novo.";
+      $("codigo").focus();
+    } finally {
+      b.disabled = false; b.textContent = "Entrar";
+    }
+  });
+
+  iniciar();
+  setInterval(() => { if (liberado && !document.hidden) carregar(true); }, 30000);
+  document.addEventListener("visibilitychange", () => { if (liberado && !document.hidden) carregar(true); });
+})();
+</script>
+</body>
+</html>

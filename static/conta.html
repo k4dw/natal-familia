@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Natal em Família</title>
+<meta name="description" content="Organize o amigo oculto e a ceia de Natal da sua família com um link só.">
+<meta name="theme-color" content="#0F3D2E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F3D2E'/%3E%3Cpath d='M16 5l6 8h-3l5 7h-4l5 6H7l5-6H8l5-7h-3z' fill='%23F4F7F5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="luzes" aria-hidden="true"></div>
+  <div class="topo-dentro">
+    <div>
+      <h1 id="titulo">Natal em Família</h1>
+      <p id="subtitulo">Amigo oculto e ceia organizados em um link só para a família toda.</p>
+    </div>
+  </div>
+</header>
+
+<main class="estreito">
+  <div class="esqueleto" id="carregando"></div>
+
+  <!-- 1. Entrar ou criar conta -->
+  <section class="bloco cartao" id="tela-conta" hidden>
+    <div class="abas" role="tablist" aria-label="Acesso do responsável">
+      <button type="button" role="tab" id="aba-criar" aria-selected="true">Criar conta</button>
+      <button type="button" role="tab" id="aba-entrar" aria-selected="false">Entrar</button>
+    </div>
+    <header>
+      <h2 id="conta-titulo">Crie a conta do responsável</h2>
+      <p id="conta-sub">Só quem organiza precisa de conta. A família entra pelo link, com um código.</p>
+    </header>
+    <form id="form-conta" novalidate>
+      <div class="campo">
+        <label for="email">E-mail</label>
+        <input type="email" class="entrada" id="email" autocomplete="email" inputmode="email" autocapitalize="none" maxlength="254">
+      </div>
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input type="password" class="entrada" id="senha" autocomplete="new-password" maxlength="200" aria-describedby="dica-senha">
+        <p class="dica" id="dica-senha">Pelo menos 8 caracteres.</p>
+      </div>
+      <p class="msg-erro" id="erro-conta" role="alert"></p>
+      <button type="submit" class="botao" id="botao-conta">Criar conta</button>
+    </form>
+  </section>
+
+  <!-- 2. Primeiro acesso: nome e código da família -->
+  <section class="bloco cartao" id="tela-familia" hidden>
+    <header>
+      <h2>Agora, a sua família</h2>
+      <p>O nome aparece no topo da página. O código é a senha que a família digita ao abrir o link.</p>
+    </header>
+    <form id="form-familia" novalidate>
+      <div class="campo">
+        <label for="fam-nome">Nome da família</label>
+        <input type="text" class="entrada" id="fam-nome" maxlength="60" placeholder="Ex.: Família Ribeiro">
+      </div>
+      <div class="campo">
+        <label for="fam-codigo">Código da família</label>
+        <input type="text" class="entrada" id="fam-codigo" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: rabanada2026" aria-describedby="dica-codigo">
+        <p class="dica" id="dica-codigo">Pelo menos 6 caracteres, fácil de ditar. Maiúsculas e minúsculas tanto faz.</p>
+      </div>
+      <p class="msg-erro" id="erro-familia" role="alert"></p>
+      <button type="submit" class="botao" id="botao-familia">Criar família e gerar link</button>
+    </form>
+  </section>
+
+  <!-- 3. Painel -->
+  <div id="tela-painel" hidden style="display:grid;gap:16px">
+    <section class="bloco cartao">
+      <header>
+        <h2>Link da família</h2>
+        <p>Mande este link no grupo e passe o código para cada pessoa.</p>
+      </header>
+      <div class="link-caixa">
+        <label for="link" class="so-leitor">Link da família</label>
+        <input type="text" class="entrada" id="link" readonly>
+        <button type="button" class="botao" id="copiar">Copiar link</button>
+        <a class="botao secundario" id="abrir" href="#">Abrir a página da família</a>
+        <p class="msg-ok" id="ok-link" role="status"></p>
+      </div>
+    </section>
+
+    <section class="bloco cartao">
+      <header>
+        <h3>Nome da família</h3>
+      </header>
+      <form id="form-nome" novalidate>
+        <div class="campo">
+          <label for="novo-nome" class="so-leitor">Nome da família</label>
+          <input type="text" class="entrada" id="novo-nome" maxlength="60">
+        </div>
+        <p class="msg-erro" id="erro-nome" role="alert"></p>
+        <p class="msg-ok" id="ok-nome" role="status"></p>
+        <button type="submit" class="botao secundario">Salvar nome</button>
+      </form>
+    </section>
+
+    <section class="bloco cartao">
+      <header>
+        <h3>Trocar o código</h3>
+        <p>O código atual não fica visível para ninguém. Ao trocar, todos precisam digitar o novo.</p>
+      </header>
+      <form id="form-codigo" novalidate>
+        <div class="campo">
+          <label for="novo-codigo">Novo código</label>
+          <input type="text" class="entrada" id="novo-codigo" maxlength="60" autocomplete="off" autocapitalize="none" spellcheck="false">
+        </div>
+        <p class="msg-erro" id="erro-codigo" role="alert"></p>
+        <p class="msg-ok" id="ok-codigo" role="status"></p>
+        <button type="submit" class="botao secundario">Trocar código</button>
+      </form>
+    </section>
+
+    <div class="rodape-conta">
+      <span id="quem"></span>
+      <button type="button" class="botao-texto" id="sair">Sair da conta</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let modo = "criar";
+  let conta = null;
+
+  async function api(metodo, caminho, corpo) {
+    const r = await fetch(caminho, {
+      method: metodo,
+      headers: corpo ? { "Content-Type": "application/json" } : undefined,
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    });
+    if (r.status === 204) return null;
+    let dados = null;
+    try { dados = await r.json(); } catch (e) {}
+    if (!r.ok) {
+      const erro = new Error("http");
+      erro.status = r.status;
+      erro.mensagem = dados && dados.detail && dados.detail.mensagem;
+      throw erro;
+    }
+    return dados;
+  }
+  const falha = (e, padrao) => e.mensagem || (e.status ? padrao : "Sem conexão. Confira a internet e tente de novo.");
+
+  function mostrar(tela) {
+    for (const t of ["carregando", "tela-conta", "tela-familia", "tela-painel"]) $(t).hidden = t !== tela;
+  }
+
+  function desenhar() {
+    if (!conta) {
+      $("titulo").textContent = "Natal em Família";
+      mostrar("tela-conta");
+      return;
+    }
+    $("quem").textContent = "Conta: " + conta.email;
+    if (!conta.familia) {
+      mostrar("tela-familia");
+      $("fam-nome").focus();
+      return;
+    }
+    const url = location.origin + "/f/" + conta.familia.id;
+    $("titulo").textContent = conta.familia.nome;
+    $("subtitulo").textContent = "Painel de quem organiza o Natal da família.";
+    $("link").value = url;
+    $("abrir").href = url;
+    $("novo-nome").value = conta.familia.nome;
+    mostrar("tela-painel");
+  }
+
+  /* Abas criar / entrar */
+  function trocarModo(novo) {
+    modo = novo;
+    const criar = modo === "criar";
+    $("aba-criar").setAttribute("aria-selected", String(criar));
+    $("aba-entrar").setAttribute("aria-selected", String(!criar));
+    $("conta-titulo").textContent = criar ? "Crie a conta do responsável" : "Entre na sua conta";
+    $("conta-sub").textContent = criar
+      ? "Só quem organiza precisa de conta. A família entra pelo link, com um código."
+      : "Use o e-mail e a senha de quem criou a família.";
+    $("botao-conta").textContent = criar ? "Criar conta" : "Entrar";
+    $("senha").autocomplete = criar ? "new-password" : "current-password";
+    $("dica-senha").hidden = !criar;
+    $("erro-conta").textContent = "";
+  }
+  $("aba-criar").addEventListener("click", () => trocarModo("criar"));
+  $("aba-entrar").addEventListener("click", () => trocarModo("entrar"));
+
+  async function enviar(botao, ocupado, acao) {
+    const rotulo = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = ocupado;
+    try { await acao(); } finally { botao.disabled = false; botao.textContent = rotulo; }
+  }
+
+  $("form-conta").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const email = $("email").value.trim();
+    const senha = $("senha").value;
+    const erro = $("erro-conta");
+    erro.textContent = "";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { erro.textContent = "Digite um e-mail válido."; $("email").focus(); return; }
+    if (modo === "criar" && senha.length < 8) { erro.textContent = "A senha precisa ter pelo menos 8 caracteres."; $("senha").focus(); return; }
+    if (!senha) { erro.textContent = "Digite a senha."; $("senha").focus(); return; }
+    enviar($("botao-conta"), modo === "criar" ? "Criando…" : "Entrando…", async () => {
+      try {
+        conta = await api("POST", modo === "criar" ? "/api/conta" : "/api/login", { email, senha });
+        $("senha").value = "";
+        desenhar();
+      } catch (e) {
+        erro.textContent = falha(e, "Não deu certo. Confira os dados e tente de novo.");
+      }
+    });
+  });
+
+  $("form-familia").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const nome = $("fam-nome").value.trim();
+    const codigo = $("fam-codigo").value.trim();
+    const erro = $("erro-familia");
+    erro.textContent = "";
+    if (!nome) { erro.textContent = "Dê um nome para a família."; $("fam-nome").focus(); return; }
+    if (codigo.length < 6) { erro.textContent = "O código precisa ter pelo menos 6 caracteres."; $("fam-codigo").focus(); return; }
+    enviar($("botao-familia"), "Criando…", async () => {
+      try {
+        conta.familia = await api("POST", "/api/familia", { nome, codigo });
+        $("fam-codigo").value = "";
+        desenhar();
+      } catch (e) {
+        if (e.status === 401) { conta = null; desenhar(); return; }
+        erro.textContent = falha(e, "Não deu para criar a família. Tente de novo.");
+      }
+    });
+  });
+
+  $("copiar").addEventListener("click", async () => {
+    const campo = $("link");
+    let copiou = false;
+    try { await navigator.clipboard.writeText(campo.value); copiou = true; } catch (e) {}
+    if (!copiou) {
+      campo.focus(); campo.select();
+      try { copiou = document.execCommand("copy"); } catch (e) {}
+    }
+    $("ok-link").textContent = copiou ? "Link copiado. Cole no grupo da família." : "Segure o dedo sobre o link para copiar.";
+  });
+  $("link").addEventListener("focus", (ev) => ev.target.select());
+
+  function formAjuste(form, campo, erroId, okId, minimo, montar, okMsg) {
+    $(form).addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const valor = $(campo).value.trim();
+      $(erroId).textContent = ""; $(okId).textContent = "";
+      if (valor.length < minimo) {
+        $(erroId).textContent = minimo > 1 ? "O código precisa ter pelo menos 6 caracteres." : "Dê um nome para a família.";
+        $(campo).focus();
+        return;
+      }
+      enviar($(form).querySelector("button"), "Salvando…", async () => {
+        try {
+          conta.familia = await api("PUT", "/api/familia", montar(valor));
+          desenhar();
+          if (campo === "novo-codigo") $(campo).value = "";
+          $(okId).textContent = okMsg;
+        } catch (e) {
+          if (e.status === 401) { conta = null; desenhar(); return; }
+          $(erroId).textContent = falha(e, "Não deu para salvar. Tente de novo.");
+        }
+      });
+    });
+  }
+  formAjuste("form-nome", "novo-nome", "erro-nome", "ok-nome", 1, (v) => ({ nome: v }), "Nome salvo.");
+  formAjuste("form-codigo", "novo-codigo", "erro-codigo", "ok-codigo", 6, (v) => ({ codigo: v }), "Código trocado. Avise a família do novo código.");
+
+  $("sair").addEventListener("click", async () => {
+    try { await api("POST", "/api/logout"); } catch (e) {}
+    conta = null;
+    $("subtitulo").textContent = "Amigo oculto e ceia organizados em um link só para a família toda.";
+    trocarModo("entrar");
+    desenhar();
+  });
+
+  (async function iniciar() {
+    try { conta = await api("GET", "/api/eu"); } catch (e) { conta = null; }
+    desenhar();
+  })();
+})();
+</script>
+</body>
+</html>
