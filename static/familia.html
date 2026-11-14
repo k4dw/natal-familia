@@ -52,10 +52,42 @@
 </div>
 
 <main id="app" hidden>
-  <form class="formulario cartao" id="form" novalidate>
-    <header>
-      <h2 id="form-titulo">Sua resposta</h2>
-      <p id="form-sub">Leva um minuto. Dá para mudar depois.</p>
+  <div class="listas">
+    <div class="resumo" id="resumo" aria-live="polite"></div>
+
+    <section class="secao" aria-labelledby="t-desejos">
+      <header>
+        <h2 id="t-desejos">Listas de desejos</h2>
+        <p>Tirou alguém no amigo oculto? Procure o nome aqui.</p>
+      </header>
+      <div id="desejos"><div class="esqueleto"></div></div>
+    </section>
+
+    <section class="secao" aria-labelledby="t-mesa">
+      <header>
+        <h2 id="t-mesa">Mesa de Natal</h2>
+        <p>Veja o que já vem para não repetir prato.</p>
+      </header>
+      <div id="mesa"><div class="esqueleto"></div></div>
+    </section>
+  </div>
+</main>
+
+<button type="button" class="fab" id="incluir" hidden>
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>
+  Incluir Resposta
+</button>
+
+<dialog class="dialogo" id="dialogo" aria-labelledby="form-titulo">
+  <form class="formulario" id="form" novalidate>
+    <header class="dialogo-topo">
+      <div>
+        <h2 id="form-titulo">Sua resposta</h2>
+        <p id="form-sub">Leva um minuto. Dá para mudar depois.</p>
+      </div>
+      <button type="button" class="fechar" id="fechar" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
     </header>
 
     <div class="campo">
@@ -104,27 +136,7 @@
       </div>
     </div>
   </form>
-
-  <div class="listas">
-    <div class="resumo" id="resumo" aria-live="polite"></div>
-
-    <section class="secao" aria-labelledby="t-desejos">
-      <header>
-        <h2 id="t-desejos">Listas de desejos</h2>
-        <p>Tirou alguém no amigo oculto? Procure o nome aqui.</p>
-      </header>
-      <div id="desejos"><div class="esqueleto"></div></div>
-    </section>
-
-    <section class="secao" aria-labelledby="t-mesa">
-      <header>
-        <h2 id="t-mesa">Mesa de Natal</h2>
-        <p>Veja o que já vem para não repetir prato.</p>
-      </header>
-      <div id="mesa"><div class="esqueleto"></div></div>
-    </section>
-  </div>
-</main>
+</dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -194,11 +206,9 @@
   async function carregar(silencioso) {
     try {
       pessoas = await api("GET", BASE + "/participantes");
-      const primeira = !carregou;
       carregou = true;
       if (meuId && !pessoas.some((p) => p.id === meuId)) gravarMeuId(null);
       if (editandoId && !pessoas.some((p) => p.id === editandoId)) limparForm();
-      if (primeira && meuId) abrir(meuId, false);
       desenhar();
     } catch (e) {
       if (e.status === 401) { mostrarPortao(); return; }
@@ -240,7 +250,7 @@
     // Listas de desejos
     if (!pessoas.length) {
       const v = el("div", "estado");
-      v.append(el("strong", null, "Ninguém respondeu ainda."), "Seja a primeira pessoa: preencha o formulário.");
+      v.append(el("strong", null, "Ninguém respondeu ainda."), "Seja a primeira pessoa: toque em Incluir Resposta.");
       $("desejos").replaceChildren(v);
     } else {
       const grade = el("div", "grade");
@@ -252,7 +262,7 @@
         const b = el("button", "botao-texto editar", "Editar");
         b.type = "button";
         b.setAttribute("aria-label", "Editar a resposta de " + p.nome);
-        b.addEventListener("click", () => abrir(p.id, true));
+        b.addEventListener("click", () => abrir(p.id));
         topo.append(h, b);
         cartao.append(topo);
         const itens = p.presentes.filter(Boolean);
@@ -335,7 +345,16 @@
     limparErros();
     atualizarCabecalho();
   }
-  function abrir(id, rolar) {
+  function mostrarDialogo() {
+    const d = $("dialogo");
+    if (!d.open) d.showModal();
+    d.scrollTop = 0;
+    $("nome").focus();
+  }
+  function fecharDialogo() {
+    if ($("dialogo").open) $("dialogo").close();
+  }
+  function abrir(id) {
     const p = pessoas.find((x) => x.id === id);
     if (!p) return;
     editandoId = id;
@@ -348,10 +367,7 @@
     $("tipo-salgada").checked = p.tipo === "salgada";
     $("tipo-doce").checked = p.tipo === "doce";
     atualizarCabecalho();
-    if (rolar) {
-      $("form").scrollIntoView({ behavior: "smooth", block: "start" });
-      $("nome").focus({ preventScroll: true });
-    }
+    mostrarDialogo();
   }
 
   let toastTimer;
@@ -401,8 +417,8 @@
       editandoId = salvo.id;
       await carregar(true);
       if (!pessoas.some((p) => p.id === salvo.id)) pessoas.push(salvo);
-      atualizarCabecalho();
       desenhar();
+      fecharDialogo();
       toast("Resposta de " + salvo.nome + " salva.");
     } catch (e) {
       botao.textContent = rotulo;
@@ -430,8 +446,12 @@
     }
   });
 
-  $("abrir-duplicado").addEventListener("click", () => { if (duplicadoId) abrir(duplicadoId, true); });
-  $("novo").addEventListener("click", () => { limparForm(); $("nome").focus(); });
+  $("abrir-duplicado").addEventListener("click", () => { if (duplicadoId) abrir(duplicadoId); });
+  $("novo").addEventListener("click", () => { limparForm(); mostrarDialogo(); });
+  $("incluir").addEventListener("click", () => { limparForm(); mostrarDialogo(); });
+  $("fechar").addEventListener("click", fecharDialogo);
+  // Toque fora da caixa fecha o formulário.
+  $("dialogo").addEventListener("click", (ev) => { if (ev.target === $("dialogo")) fecharDialogo(); });
 
   $("apagar").addEventListener("click", async () => {
     if (!editandoId) return;
@@ -446,6 +466,7 @@
       await api("DELETE", BASE + "/participantes/" + id);
       if (id === meuId) gravarMeuId(null);
       limparForm();
+      fecharDialogo();
       await carregar(true);
       toast("Resposta apagada.");
     } catch (e) {
@@ -460,6 +481,8 @@
     for (const x of ["carregando", "portao", "invalido"]) $(x).hidden = x !== id;
     $("entrada").hidden = !id;
     $("app").hidden = !!id;
+    $("incluir").hidden = !!id;
+    if (id) fecharDialogo();
   }
   function mostrarPortao() {
     liberado = false;

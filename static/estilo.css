@@ -1,4 +1,4 @@
-/* Layout: faixa verde-pinheiro no topo, formulário em 3 passos, listas ao lado (empilha no celular). */
+/* Layout: faixa verde-pinheiro no topo, listas na página, formulário em 3 passos numa janela aberta pelo botão flutuante. */
 :root {
   --neve: #F3F6F4;
   --papel: #FFFFFF;
@@ -11,6 +11,7 @@
   --suave: #55665E;
   --linha: #D5DFDA;
   --erro: #9B1C1C;
+  --vermelho: #C8102E;
   --fonte-titulo: "Young Serif", Georgia, "Times New Roman", serif;
   --fonte-texto: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --raio: 14px;
@@ -55,19 +56,18 @@ button, input { font: inherit; color: inherit; }
 
 /* Estrutura */
 #app {
-  max-width: 1080px; margin: 0 auto; padding: 20px 16px 56px;
+  max-width: 1080px; margin: 0 auto; padding: 20px 16px 112px;
   display: grid; gap: 24px;
 }
 @media (min-width: 900px) {
-  #app { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; padding: 28px 20px 72px; gap: 32px; }
-  .formulario { position: sticky; top: 20px; }
+  #app { padding: 28px 20px 120px; }
 }
 .cartao { background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); }
 
 /* Formulário */
 .formulario { padding: 20px; display: grid; gap: 20px; }
-.formulario > header h2 { font: 400 1.5rem/1.2 var(--fonte-titulo); }
-.formulario > header p { color: var(--suave); font-size: .9375rem; margin-top: 4px; }
+.formulario header h2 { font: 400 1.5rem/1.2 var(--fonte-titulo); }
+.formulario header p { color: var(--suave); font-size: .9375rem; margin-top: 4px; }
 .campo { display: grid; gap: 6px; }
 .campo label, .rotulo { font-weight: 600; font-size: .9375rem; }
 .entrada {
@@ -186,7 +186,7 @@ input[aria-invalid="true"] { border-color: var(--erro); }
 @keyframes brilho { to { background-position: -200% 0; } }
 
 .toast {
-  position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 20px);
+  position: fixed; left: 50%; bottom: 92px; z-index: 20; transform: translate(-50%, 20px);
   background: var(--pinheiro); color: #fff; font-weight: 600;
   padding: 12px 20px; border-radius: 999px; max-width: calc(100% - 32px);
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
@@ -216,3 +216,33 @@ a.botao { display: grid; place-items: center; text-decoration: none; text-align:
 .rodape-conta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--suave); font-size: .875rem; overflow-wrap: anywhere; }
 .msg-ok { color: var(--pinheiro); font-size: .875rem; font-weight: 600; }
 .msg-ok:empty { display: none; }
+
+/* Botão flutuante: fica fixo no canto, não rola com a página */
+.fab {
+  position: fixed; z-index: 10;
+  right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom));
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 56px; padding: 0 22px 0 18px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--vermelho); color: #fff; font-weight: 700; font-size: 1.0625rem;
+  box-shadow: 0 8px 24px rgba(200, 16, 46, .38), 0 2px 6px rgba(0, 0, 0, .18);
+  transition: background .15s, transform .05s;
+}
+.fab:hover { background: #A60D26; }
+.fab:active { transform: translateY(1px); }
+.fab svg { flex: none; }
+
+/* Janela do formulário */
+.dialogo {
+  width: min(480px, calc(100% - 24px)); max-height: calc(100dvh - 24px);
+  padding: 0; border: 1px solid var(--linha); border-radius: var(--raio);
+  background: var(--papel); color: var(--tinta); overflow-y: auto; overscroll-behavior: contain;
+  box-shadow: 0 20px 60px rgba(15, 61, 46, .35);
+}
+.dialogo::backdrop { background: rgba(15, 35, 28, .55); }
+html:has(.dialogo[open]) { overflow: hidden; }
+.dialogo-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.fechar {
+  flex: none; width: 44px; height: 44px; margin: -8px -8px 0 0;
+  display: grid; place-items: center; border: 0; border-radius: 50%; background: none; cursor: pointer; color: var(--suave);
+}
+.fechar:hover { background: var(--pinheiro-claro); color: var(--tinta); }
