@@ -82,12 +82,15 @@
     <section class="bloco cartao">
       <header>
         <h2>Link da família</h2>
-        <p>Mande este link no grupo e passe o código para cada pessoa.</p>
+        <p>Mande o link e o código no grupo da família.</p>
       </header>
       <div class="link-caixa">
         <label for="link" class="so-leitor">Link da família</label>
         <input type="text" class="entrada" id="link" readonly>
-        <button type="button" class="botao" id="copiar">Copiar link</button>
+        <div class="dupla">
+          <button type="button" class="botao" id="copiar">Copiar link</button>
+          <button type="button" class="botao secundario" id="whats">Enviar no Whats</button>
+        </div>
         <a class="botao secundario" id="abrir" href="#">Abrir a página da família</a>
         <p class="msg-ok" id="ok-link" role="status"></p>
       </div>
@@ -111,7 +114,7 @@
     <section class="bloco cartao">
       <header>
         <h3>Trocar o código</h3>
-        <p>O código atual não fica visível para ninguém. Ao trocar, todos precisam digitar o novo.</p>
+        <p id="codigo-atual"></p>
       </header>
       <form id="form-codigo" novalidate>
         <div class="campo">
@@ -179,6 +182,14 @@
     $("link").value = url;
     $("abrir").href = url;
     $("novo-nome").value = conta.familia.nome;
+    const atual = $("codigo-atual");
+    if (conta.familia.codigo) {
+      const forte = document.createElement("strong");
+      forte.textContent = conta.familia.codigo;
+      atual.replaceChildren("Código atual: ", forte, ". Só você vê isto. Ao trocar, todos precisam digitar o novo.");
+    } else {
+      atual.textContent = "Esta família foi criada antes de o código ficar guardado aqui. Digite o código atual abaixo para ele entrar na mensagem do WhatsApp; se for o mesmo, ninguém precisa digitar de novo.";
+    }
     mostrar("tela-painel");
   }
 
@@ -259,6 +270,27 @@
   });
   $("link").addEventListener("focus", (ev) => ev.target.select());
 
+  /* Mensagem pronta para o WhatsApp: link + código, com o negrito do próprio app */
+  function mensagemWhats() {
+    const f = conta.familia;
+    const linhas = [
+      "\u{1F384} *Natal da " + f.nome + "*",
+      "",
+      "Vamos organizar o amigo oculto e a ceia! Abra o link, digite o código e conte o que você quer ganhar e o que vai levar.",
+      "",
+      "\u{1F517} Link: " + $("link").value,
+    ];
+    if (f.codigo) linhas.push("\u{1F511} Código: *" + f.codigo + "*");
+    return linhas.join("\n");
+  }
+  $("whats").addEventListener("click", () => {
+    // wa.me abre o app no celular e o WhatsApp Web no computador; a pessoa escolhe o grupo.
+    window.open("https://wa.me/?text=" + encodeURIComponent(mensagemWhats()), "_blank", "noopener");
+    $("ok-link").textContent = conta.familia.codigo
+      ? "Escolha o grupo da família no WhatsApp e envie."
+      : "A mensagem foi sem o código. Informe o código em Trocar o código para ele ir junto.";
+  });
+
   function formAjuste(form, campo, erroId, okId, minimo, montar, okMsg) {
     $(form).addEventListener("submit", (ev) => {
       ev.preventDefault();
@@ -283,7 +315,7 @@
     });
   }
   formAjuste("form-nome", "novo-nome", "erro-nome", "ok-nome", 1, (v) => ({ nome: v }), "Nome salvo.");
-  formAjuste("form-codigo", "novo-codigo", "erro-codigo", "ok-codigo", 6, (v) => ({ codigo: v }), "Código trocado. Avise a família do novo código.");
+  formAjuste("form-codigo", "novo-codigo", "erro-codigo", "ok-codigo", 6, (v) => ({ codigo: v }), "Código salvo.");
 
   $("sair").addEventListener("click", async () => {
     try { await api("POST", "/api/logout"); } catch (e) {}

@@ -91,6 +91,11 @@ def criar_banco() -> None:
             );
             """
         )
+        # O código também fica guardado em texto para o responsável poder reenviá-lo
+        # à família. Famílias criadas antes disso ficam com '' até o código ser informado.
+        colunas = {c["name"] for c in con.execute("PRAGMA table_info(familias)")}
+        if "codigo" not in colunas:
+            con.execute("ALTER TABLE familias ADD COLUMN codigo TEXT NOT NULL DEFAULT ''")
         con.execute("DELETE FROM sessoes WHERE expira_em < ?", (int(time.time()),))
 
 
@@ -266,15 +271,18 @@ def validar_nome_familia(nome: str) -> str:
     return nome
 
 
-def validar_codigo(codigo: str) -> str:
-    codigo = normalizar_codigo(codigo)
-    if len(codigo) < 6:
+def validar_codigo(codigo: str) -> tuple[str, str]:
+    """Devolve (código como foi digitado, código normalizado para conferência)."""
+    digitado = " ".join(codigo.split())
+    normal = normalizar_codigo(codigo)
+    if len(normal) < 6:
         raise HTTPException(422, detail={"mensagem": "O código precisa ter pelo menos 6 caracteres."})
-    return codigo
+    return digitado, normal
 
 
-def familia_publica(f: sqlite3.Row | None) -> dict | None:
-    return {"id": f["id"], "nome": f["nome"]} if f else None
+def familia_do_dono(f: sqlite3.Row | None) -> dict | None:
+    """Dados da família para o responsável logado — inclui o código, que só ele vê."""
+    return {"id": f["id"], "nome": f["nome"], "codigo": f["codigo"]} if f else None
 
 
 # ------------------------------------------------------------------ app
@@ -311,7 +319,7 @@ def login(dados: Credenciais, request: Request, response: Response) -> dict:
         liberar(request, "login:" + dados.email)
         abrir_sessao(con, response, request, "sessao", DIAS_SESSAO_ADMIN, usuario_id=u["id"])
         f = con.execute("SELECT * FROM familias WHERE usuario_id = ?", (u["id"],)).fetchone()
-    return {"email": u["email"], "familia": familia_publica(f)}
+    return {"email": u["email"], "familia": familia_do_dono(f)}
 
 
 @app.post("/api/logout", status_code=204)
@@ -328,22 +336,24 @@ def eu(request: Request) -> dict:
     with closing(conectar()) as con:
         u = exigir_usuario(con, request)
         f = con.execute("SELECT * FROM familias WHERE usuario_id = ?", (u["id"],)).fetchone()
-    return {"email": u["email"], "familia": familia_publica(f)}
+    return {"email": u["email"], "familia": familia_do_dono(f)}
 
 
 @app.post("/api/familia", status_code=201)
 def criar_familia(dados: NovaFamilia, request: Request) -> dict:
-    nome, codigo = validar_nome_familia(dados.nome), validar_codigo(dados.codigo)
+    nome = validar_nome_familia(dados.nome)
+    codigo, codigo_normal = validar_codigo(dados.codigo)
     with closing(conectar()) as con, con:
         u = exigir_usuario(con, request)
         if con.execute("SELECT 1 FROM familias WHERE usuario_id = ?", (u["id"],)).fetchone():
             raise HTTPException(409, detail={"mensagem": "Sua conta já tem uma família."})
         fid = str(uuid.uuid4())
         con.execute(
-            "INSERT INTO familias (id, usuario_id, nome, codigo_hash, criado_em) VALUES (?, ?, ?, ?, ?)",
-            (fid, u["id"], nome, gerar_hash(codigo), agora()),
+            """INSERT INTO familias (id, usuario_id, nome, codigo_hash, codigo, criado_em)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (fid, u["id"], nome, gerar_hash(codigo_normal), codigo, agora()),
         )
-    return {"id": fid, "nome": nome}
+    return {"id": fid, "nome": nome, "codigo": codigo}
 
 
 @app.put("/api/familia")
@@ -356,12 +366,17 @@ def ajustar_familia(dados: AjusteFamilia, request: Request) -> dict:
         if dados.nome is not None:
             con.execute("UPDATE familias SET nome = ? WHERE id = ?", (validar_nome_familia(dados.nome), f["id"]))
         if dados.codigo is not None:
-            con.execute("UPDATE familias SET codigo_hash = ? WHERE id = ?",
-                        (gerar_hash(validar_codigo(dados.codigo)), f["id"]))
-            # Código novo: quem entrou com o antigo precisa informar o novo.
-            con.execute("DELETE FROM sessoes WHERE familia_id = ?", (f["id"],))
+            codigo, codigo_normal = validar_codigo(dados.codigo)
+            if conferir_hash(codigo_normal, f["codigo_hash"]):
+                # É o código que já valia: só passa a ficar guardado, ninguém é desconectado.
+                con.execute("UPDATE familias SET codigo = ? WHERE id = ?", (codigo, f["id"]))
+            else:
+                con.execute("UPDATE familias SET codigo_hash = ?, codigo = ? WHERE id = ?",
+                            (gerar_hash(codigo_normal), codigo, f["id"]))
+                # Código novo: quem entrou com o antigo precisa informar o novo.
+                con.execute("DELETE FROM sessoes WHERE familia_id = ?", (f["id"],))
         f = con.execute("SELECT * FROM familias WHERE id = ?", (f["id"],)).fetchone()
-    return familia_publica(f)
+    return familia_do_dono(f)
 
 
 # ---- página da família

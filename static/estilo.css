@@ -217,6 +217,8 @@ input[aria-invalid="true"] { border-color: var(--erro); }
 .abas button[aria-selected="true"] { background: var(--papel); color: var(--pinheiro); box-shadow: 0 1px 3px rgba(15,61,46,.15); }
 .link-caixa { display: grid; gap: 10px; }
 .link-caixa .entrada { font-size: .875rem; background: var(--neve); }
+.dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dupla .botao { padding: 12px 8px; font-size: .9375rem; white-space: nowrap; }
 .botao.secundario { background: var(--pinheiro); }
 .botao.secundario:hover { background: #0A2C21; }
 a.botao { display: grid; place-items: center; text-decoration: none; text-align: center; }
