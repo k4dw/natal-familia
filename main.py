@@ -556,4 +556,16 @@ def service_worker() -> FileResponse:
 
 
 app.mount("/font", StaticFiles(directory=BASE_DIR / "font"), name="font")
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+
+class EstaticosSemCache(StaticFiles):
+    """Faz o navegador conferir a cada visita se o arquivo mudou (responde 304 se não mudou).
+    Sem isso o CSS antigo pode ficar guardado e a página nova aparece sem o estilo novo."""
+
+    def file_response(self, *args, **kwargs):
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
+app.mount("/static", EstaticosSemCache(directory=BASE_DIR / "static"), name="static")
