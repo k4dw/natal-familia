@@ -5,7 +5,7 @@ FastAPI + SQLite, sem dependências além do FastAPI.
 - O responsável cria uma conta (e-mail + senha), dá nome à família e define
   um código secreto. O app gera um link com UUID: /f/<uuid>.
 - A família abre o link, informa o código e preenche: 3 opções de presente,
-  o prato que vai levar e se é doce ou salgado.
+  e o que vai levar para a ceia (um salgado, um doce ou os dois).
 """
 import hashlib
 import hmac
@@ -20,7 +20,6 @@ from collections import defaultdict, deque
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -96,6 +95,14 @@ def criar_banco() -> None:
         colunas = {c["name"] for c in con.execute("PRAGMA table_info(familias)")}
         if "codigo" not in colunas:
             con.execute("ALTER TABLE familias ADD COLUMN codigo TEXT NOT NULL DEFAULT ''")
+        # Cada pessoa pode levar um salgado e um doce. Antes havia um prato só (comida + tipo);
+        # as colunas antigas ficam na tabela, sem uso, e o prato é copiado para a coluna certa.
+        colunas = {c["name"] for c in con.execute("PRAGMA table_info(participantes)")}
+        if "salgado" not in colunas:
+            con.execute("ALTER TABLE participantes ADD COLUMN salgado TEXT NOT NULL DEFAULT ''")
+            con.execute("ALTER TABLE participantes ADD COLUMN doce TEXT NOT NULL DEFAULT ''")
+            con.execute("UPDATE participantes SET doce = comida WHERE tipo = 'doce'")
+            con.execute("UPDATE participantes SET salgado = comida WHERE tipo <> 'doce'")
         con.execute("DELETE FROM sessoes WHERE expira_em < ?", (int(time.time()),))
 
 
@@ -242,10 +249,10 @@ class Codigo(BaseModel):
 class Resposta(BaseModel):
     nome: str = Field(min_length=1, max_length=60)
     presentes: list[str] = Field(default_factory=list, max_length=3)
-    comida: str = Field(default="", max_length=120)
-    tipo: Literal["", "doce", "salgada"] = ""
+    salgado: str = Field(default="", max_length=120)
+    doce: str = Field(default="", max_length=120)
 
-    @field_validator("nome", "comida")
+    @field_validator("nome", "salgado", "doce")
     @classmethod
     def limpar(cls, v: str) -> str:
         return " ".join(v.split())
@@ -414,15 +421,14 @@ def para_dict(row: sqlite3.Row) -> dict:
         "id": row["id"],
         "nome": row["nome"],
         "presentes": [row["presente1"], row["presente2"], row["presente3"]],
-        "comida": row["comida"],
-        "tipo": row["tipo"],
+        "salgado": row["salgado"],
+        "doce": row["doce"],
         "atualizado_em": row["atualizado_em"],
     }
 
 
 def valores(r: Resposta) -> tuple:
-    tipo = r.tipo if r.comida else ""
-    return (r.nome, r.nome.casefold(), *r.presentes, r.comida, tipo, agora())
+    return (r.nome, r.nome.casefold(), *r.presentes, r.salgado, r.doce, agora())
 
 
 @app.get("/api/f/{fid}/participantes")
@@ -447,7 +453,7 @@ def criar(r: Resposta, fid: str = Depends(acesso)) -> dict:
             )
         cur = con.execute(
             """INSERT INTO participantes
-               (familia_id, nome, nome_chave, presente1, presente2, presente3, comida, tipo, atualizado_em)
+               (familia_id, nome, nome_chave, presente1, presente2, presente3, salgado, doce, atualizado_em)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (fid, *valores(r)),
         )
@@ -473,7 +479,7 @@ def atualizar(pid: int, r: Resposta, fid: str = Depends(acesso)) -> dict:
         con.execute(
             """UPDATE participantes
                SET nome = ?, nome_chave = ?, presente1 = ?, presente2 = ?, presente3 = ?,
-                   comida = ?, tipo = ?, atualizado_em = ?
+                   salgado = ?, doce = ?, atualizado_em = ?
                WHERE id = ? AND familia_id = ?""",
             (*valores(r), pid, fid),
         )

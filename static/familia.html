@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/estilo.css?v=2">
+<link rel="stylesheet" href="/static/estilo.css?v=3">
 </head>
 <body>
 
@@ -129,20 +129,15 @@
 
     <section class="passo" aria-labelledby="t-comida">
       <div class="passo-titulo"><span class="passo-num" aria-hidden="true">2</span><h3 id="t-comida">O que você leva para a ceia</h3></div>
+      <p class="dica">Pode levar um salgado, um doce ou os dois.</p>
       <div class="campo">
-        <label for="comida" class="so-leitor">Prato que você vai levar</label>
-        <input type="text" class="entrada" id="comida" maxlength="120" placeholder="Ex.: farofa, rabanada, pavê">
+        <label for="salgado">Salgado</label>
+        <input type="text" class="entrada" id="salgado" maxlength="120" placeholder="Ex.: farofa, salpicão">
       </div>
-    </section>
-
-    <section class="passo" aria-labelledby="t-tipo">
-      <div class="passo-titulo"><span class="passo-num" aria-hidden="true">3</span><h3 id="t-tipo">É doce ou salgado?</h3></div>
-      <fieldset class="escolha" aria-describedby="erro-tipo">
-        <legend class="so-leitor">Tipo do prato</legend>
-        <label><input type="radio" name="tipo" id="tipo-salgada" value="salgada"><span class="marca" aria-hidden="true"></span>Salgado</label>
-        <label><input type="radio" name="tipo" id="tipo-doce" value="doce"><span class="marca" aria-hidden="true"></span>Doce</label>
-      </fieldset>
-      <p class="msg-erro" id="erro-tipo" role="alert"></p>
+      <div class="campo">
+        <label for="doce">Doce</label>
+        <input type="text" class="entrada" id="doce" maxlength="120" placeholder="Ex.: rabanada, pavê">
+      </div>
     </section>
 
     <div class="acoes">
@@ -264,10 +259,9 @@
 
   /* Desenho das listas */
   function desenhar() {
-    const comPrato = pessoas.filter((p) => p.comida);
-    const salgados = comPrato.filter((p) => p.tipo === "salgada");
-    const doces = comPrato.filter((p) => p.tipo === "doce");
-    const semTipo = comPrato.filter((p) => !p.tipo);
+    const pratos = (campo) => pessoas.filter((p) => p[campo]).map((p) => ({ prato: p[campo], nome: p.nome }));
+    const salgados = pratos("salgado");
+    const doces = pratos("doce");
 
     const pilula = (n, um, varios) => {
       const s = el("span", "pilula");
@@ -323,7 +317,7 @@
     }
 
     // Mesa
-    if (!comPrato.length) {
+    if (!salgados.length && !doces.length) {
       const v = el("div", "estado");
       v.append(el("strong", null, "A mesa ainda está vazia."), "Os pratos aparecem aqui, separados em salgados e doces.");
       $("mesa").replaceChildren(v);
@@ -336,9 +330,9 @@
         c.append(h);
         if (!lista.length) { c.append(el("p", "vazio-item", vazio)); return c; }
         const ul = el("ul");
-        for (const p of lista) {
+        for (const item of lista) {
           const li = el("li");
-          li.append(el("b", null, p.comida), el("small", null, "quem leva: " + p.nome));
+          li.append(el("b", null, item.prato), el("small", null, "quem leva: " + item.nome));
           ul.append(li);
         }
         c.append(ul);
@@ -348,14 +342,13 @@
         coluna("Salgados", salgados, "Nenhum salgado por enquanto."),
         coluna("Doces", doces, "Nenhum doce por enquanto.")
       );
-      if (semTipo.length) mesa.append(coluna("Sem tipo informado", semTipo, ""));
       $("mesa").replaceChildren(mesa);
     }
   }
 
   /* Formulário */
   function limparErros() {
-    for (const id of ["erro-nome", "erro-tipo", "erro-geral"]) $(id).textContent = "";
+    for (const id of ["erro-nome", "erro-geral"]) $(id).textContent = "";
     $("nome").removeAttribute("aria-invalid");
     $("aviso-duplicado").hidden = true;
     duplicadoId = null;
@@ -408,9 +401,8 @@
     $("presente1").value = p.presentes[0] || "";
     $("presente2").value = p.presentes[1] || "";
     $("presente3").value = p.presentes[2] || "";
-    $("comida").value = p.comida;
-    $("tipo-salgada").checked = p.tipo === "salgada";
-    $("tipo-doce").checked = p.tipo === "doce";
+    $("salgado").value = p.salgado;
+    $("doce").value = p.doce;
     atualizarCabecalho();
     mostrarDialogo();
   }
@@ -430,9 +422,6 @@
     ev.preventDefault();
     limparErros();
     const nome = $("nome").value.trim();
-    const comida = $("comida").value.trim();
-    const marcado = document.querySelector('input[name="tipo"]:checked');
-    const tipo = marcado ? marcado.value : "";
 
     if (!nome) {
       $("erro-nome").textContent = "Escreva seu nome para a família saber de quem é a lista.";
@@ -440,17 +429,12 @@
       $("nome").focus();
       return;
     }
-    if (comida && !tipo) {
-      $("erro-tipo").textContent = "Marque se o prato é salgado ou doce.";
-      $("tipo-salgada").focus();
-      return;
-    }
 
     const corpo = {
       nome,
       presentes: [$("presente1").value, $("presente2").value, $("presente3").value],
-      comida,
-      tipo: comida ? tipo : "",
+      salgado: $("salgado").value,
+      doce: $("doce").value,
     };
     const botao = $("salvar");
     const rotulo = botao.textContent;

@@ -111,26 +111,6 @@ input[aria-invalid="true"] { border-color: var(--erro); }
 .pessoa li .abrir-link { min-height: 36px; padding: 4px 12px; }
 .presente span { color: var(--suave); font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
 
-.escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 0; padding: 0; margin: 0; min-width: 0; }
-.escolha legend { padding: 0; margin-bottom: 8px; }
-.escolha label {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 52px; padding: 10px; cursor: pointer;
-  border: 1.5px solid #9FB0A8; border-radius: 10px; font-weight: 600;
-  transition: background .15s, border-color .15s;
-}
-.escolha label:hover { border-color: var(--pinheiro); }
-.escolha input { position: absolute; opacity: 0; pointer-events: none; }
-.escolha .marca {
-  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--suave);
-  display: grid; place-items: center; flex: none;
-}
-.escolha .marca::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
-.escolha label:has(input:checked) { background: var(--pinheiro-claro); border-color: var(--pinheiro); }
-.escolha label:has(input:checked) .marca { border-color: var(--pinheiro); }
-.escolha label:has(input:checked) .marca::after { background: var(--pinheiro); }
-.escolha label:has(input:focus-visible) { outline: 3px solid var(--ouro); outline-offset: 2px; }
-
 .acoes { display: grid; gap: 10px; }
 .botao {
   min-height: 52px; padding: 12px 20px; border: 0; border-radius: 12px; cursor: pointer;

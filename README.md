@@ -8,8 +8,7 @@ um código secreto. O app gera um link com UUID (`/f/<uuid>`).
 **A família** abre o link, digita o código uma vez por aparelho e informa:
 
 1. **Amigo oculto** — 3 opções de presente
-2. **Ceia** — o prato que vai levar
-3. **Doce ou salgado** — o tipo do prato
+2. **Ceia** — o que vai levar: um salgado, um doce ou os dois
 
 Stack: FastAPI + SQLite (biblioteca padrão) + HTML/CSS/JS sem build.
 
