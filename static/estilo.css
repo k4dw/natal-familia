@@ -98,7 +98,17 @@ input[aria-invalid="true"] { border-color: var(--erro); }
 }
 .passo h3 { font: 400 1.1875rem/1.2 var(--fonte-titulo); }
 .dica { color: var(--suave); font-size: .875rem; }
-.presente { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 8px; }
+.presente { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; }
+.presente .entrada { min-width: 0; }
+.abrir-link {
+  display: inline-grid; place-items: center; min-height: 44px; padding: 8px 14px;
+  border: 1.5px solid var(--pinheiro); border-radius: 10px;
+  color: var(--pinheiro); font-weight: 600; font-size: .9375rem; text-decoration: none; white-space: nowrap;
+}
+.abrir-link:hover { background: var(--pinheiro-claro); }
+.abrir-link[hidden] { display: none; }
+.pessoa li.com-link { grid-template-columns: 22px 1fr auto; align-items: center; }
+.pessoa li .abrir-link { min-height: 36px; padding: 4px 12px; }
 .presente span { color: var(--suave); font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
 
 .escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 0; padding: 0; margin: 0; min-width: 0; }

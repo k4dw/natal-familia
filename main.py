@@ -260,7 +260,7 @@ class Resposta(BaseModel):
     @field_validator("presentes")
     @classmethod
     def limpar_presentes(cls, v: list[str]) -> list[str]:
-        itens = [" ".join(p.split())[:120] for p in v]
+        itens = [" ".join(p.split())[:500] for p in v]
         return (itens + ["", "", ""])[:3]
 
 

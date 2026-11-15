@@ -122,9 +122,9 @@
     <section class="passo" aria-labelledby="t-presentes">
       <div class="passo-titulo"><span class="passo-num" aria-hidden="true">1</span><h3 id="t-presentes">Amigo oculto</h3></div>
       <p class="dica">Três opções de presente, da que você mais quer para a que menos quer.</p>
-      <div class="presente"><span aria-hidden="true">1</span><input type="text" class="entrada" id="presente1" maxlength="120" aria-label="Primeira opção de presente" placeholder="Ex.: livro de receitas"></div>
-      <div class="presente"><span aria-hidden="true">2</span><input type="text" class="entrada" id="presente2" maxlength="120" aria-label="Segunda opção de presente" placeholder="Ex.: chinelo tamanho 39"></div>
-      <div class="presente"><span aria-hidden="true">3</span><input type="text" class="entrada" id="presente3" maxlength="120" aria-label="Terceira opção de presente" placeholder="Ex.: caneca térmica"></div>
+      <div class="presente"><span aria-hidden="true">1</span><input type="text" class="entrada" id="presente1" maxlength="500" aria-label="Primeira opção de presente" placeholder="Ex.: livro de receitas"><a class="abrir-link" id="link1" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 1 em nova aba</span></a></div>
+      <div class="presente"><span aria-hidden="true">2</span><input type="text" class="entrada" id="presente2" maxlength="500" aria-label="Segunda opção de presente" placeholder="Ex.: chinelo tamanho 39"><a class="abrir-link" id="link2" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 2 em nova aba</span></a></div>
+      <div class="presente"><span aria-hidden="true">3</span><input type="text" class="entrada" id="presente3" maxlength="500" aria-label="Terceira opção de presente" placeholder="Ex.: caneca térmica"><a class="abrir-link" id="link3" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 3 em nova aba</span></a></div>
     </section>
 
     <section class="passo" aria-labelledby="t-comida">
@@ -170,6 +170,21 @@
     if (cls) n.className = cls;
     if (texto != null) n.textContent = texto;
     return n;
+  };
+
+  // Opção de presente que é um link: começa com https:// e é uma URL válida.
+  const linkHttps = (texto) => {
+    const t = (texto || "").trim();
+    if (!/^https:\/\/\S+$/i.test(t)) return null;
+    try { const u = new URL(t); return u.protocol === "https:" ? u : null; } catch { return null; }
+  };
+  const atualizarLinks = () => {
+    for (const n of [1, 2, 3]) {
+      const url = linkHttps($("presente" + n).value);
+      const a = $("link" + n);
+      a.hidden = !url;
+      if (url) a.href = url.href; else a.removeAttribute("href");
+    }
   };
 
   let pessoas = [];
@@ -286,7 +301,18 @@
         const itens = p.presentes.filter(Boolean);
         if (itens.length) {
           const ol = el("ol");
-          for (const t of itens) ol.append(el("li", null, t));
+          for (const t of itens) {
+            const url = linkHttps(t);
+            if (!url) { ol.append(el("li", null, t)); continue; }
+            const li = el("li", "com-link");
+            li.append(el("span", "link-texto", url.hostname.replace(/^www\./, "")));
+            const a = el("a", "abrir-link", "Abrir");
+            a.href = url.href; a.target = "_blank"; a.rel = "noopener noreferrer";
+            a.title = t;
+            a.setAttribute("aria-label", "Abrir o link de " + url.hostname + " em nova aba");
+            li.append(a);
+            ol.append(li);
+          }
           cartao.append(ol);
         } else {
           cartao.append(el("p", "vazio-item", "Ainda não disse o que quer ganhar."));
@@ -365,6 +391,7 @@
   }
   function mostrarDialogo() {
     const d = $("dialogo");
+    atualizarLinks();
     if (!d.open) d.showModal();
     d.scrollTop = 0;
     $("nome").focus();
@@ -396,6 +423,8 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove("visivel"), 3200);
   }
+
+  for (const n of [1, 2, 3]) $("presente" + n).addEventListener("input", atualizarLinks);
 
   $("form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
