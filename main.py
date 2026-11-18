@@ -147,6 +147,38 @@ def separar_link(texto: str) -> tuple[str, str]:
     return " ".join(resto.split()).strip(SEPARADORES + "([{"), url
 
 
+# Muitas lojas põem preço, parcelas e desconto no título ("Tênis X - R$ 199,90 | Loja").
+# Num amigo oculto o preço não deve aparecer: isso sai na hora de mostrar o título.
+_SEP = r"[|\-\u2013\u2014\u00b7:,/]"
+_VALOR = r"(?:R\$|US\$|U\$|\$|\u20ac|\u00a3|BRL|USD|EUR)\s*\d[\d.,]*"
+_SEM_PRECO = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        # "de R$ 299 por R$ 199,90", "a partir de R$ 50", "12x de R$ 10,00 sem juros", "R$ 99 no pix"
+        r"(?:\b(?:de|por|a partir de|apenas|s[oó](?: por)?|pre[cç]o:?|valor:?)\s+)?"
+        r"(?:\d+\s*x\s*(?:de\s+)?)?" + _VALOR
+        + r"(?:\s*(?:\u00e0 vista|a vista|no pix|sem juros|cada|/m[eê]s))?",
+        r"\b(?:em at[eé]\s+)?\d+\s*x\s*(?:sem juros|s/\s*juros)",
+        r"\bem at[eé]\s+\d+\s*x\b",
+        r"\b\d+\s*%\s*(?:off|de desconto)",
+    )
+]
+
+
+def limpar_titulo(titulo: str | None) -> str | None:
+    """Título sem preço, parcelas nem desconto. None continua None (ainda buscando)."""
+    if not titulo:
+        return titulo
+    t = titulo
+    for padrao in _SEM_PRECO:
+        t = padrao.sub(" ", t)
+    t = " ".join(t.split())
+    # Separadores que ficaram sobrando: "Tênis X -  | Loja" vira "Tênis X | Loja".
+    t = re.sub(rf"\s*({_SEP})(?:\s*{_SEP})+", r" \1", t)
+    t = re.sub(rf"^(?:\s*{_SEP})+|(?:\s*{_SEP})+$|\(\s*\)", "", t).strip()
+    return " ".join(t.split()) if len(t) >= 3 else ""
+
+
 def link_sozinho(texto: str) -> str:
     """O link, se a opção for só um link; senão ''."""
     descricao, url = separar_link(texto)
@@ -598,7 +630,7 @@ def para_dict(row: sqlite3.Row, titulos: dict[str, str | None]) -> dict:
         "nome": row["nome"],
         "presentes": presentes,
         # Título da página de cada opção que é só um link (None = ainda buscando).
-        "titulos": [titulos.get(link_sozinho(p), "") for p in presentes],
+        "titulos": [limpar_titulo(titulos.get(link_sozinho(p), "")) for p in presentes],
         "salgado": row["salgado"],
         "doce": row["doce"],
         "atualizado_em": row["atualizado_em"],
