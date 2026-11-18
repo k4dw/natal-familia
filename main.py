@@ -9,9 +9,12 @@ FastAPI + SQLite, sem dependências além do FastAPI.
 """
 import hashlib
 import hmac
+import html
+import ipaddress
 import os
 import re
 import secrets
+import socket
 import sqlite3
 import threading
 import time
@@ -19,9 +22,12 @@ import uuid
 from collections import defaultdict, deque
 from contextlib import closing
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib import request as urlreq
+from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -88,6 +94,13 @@ def criar_banco() -> None:
                 atualizado_em TEXT NOT NULL,
                 UNIQUE (familia_id, nome_chave)
             );
+            -- Título da página de cada link de presente, buscado uma vez e guardado.
+            -- titulo '' = a busca falhou (tenta de novo depois de algumas horas).
+            CREATE TABLE IF NOT EXISTS titulos_link (
+                url        TEXT PRIMARY KEY,
+                titulo     TEXT NOT NULL,
+                buscado_em INTEGER NOT NULL
+            );
             """
         )
         # O código também fica guardado em texto para o responsável poder reenviá-lo
@@ -104,6 +117,168 @@ def criar_banco() -> None:
             con.execute("UPDATE participantes SET doce = comida WHERE tipo = 'doce'")
             con.execute("UPDATE participantes SET salgado = comida WHERE tipo <> 'doce'")
         con.execute("DELETE FROM sessoes WHERE expira_em < ?", (int(time.time()),))
+
+
+# ------------------------------------------------- links nas opções de presente
+# A opção pode ter texto e link juntos ("Tênis 33 https://..."). O link é o primeiro
+# https:// do texto. Quando a opção é só o link, a lista mostra o título da página,
+# que o servidor busca em segundo plano e guarda em titulos_link.
+# A mesma regra existe em familia.html (separarLink); mantenha as duas iguais.
+
+URL_RE = re.compile(r"https://[^\s<>\"']+", re.IGNORECASE)
+PONTUACAO_FINAL = ".,;:!?)]}\u00bb\u201d"
+SEPARADORES = " -\u2013\u2014:|,;"
+REBUSCAR_FALHA = 6 * 3600       # segundos até tentar de novo um link que falhou
+LIMITE_PAGINA = 512 * 1024      # bytes lidos de cada página
+_buscando: set[str] = set()
+_buscando_lock = threading.Lock()
+
+
+def separar_link(texto: str) -> tuple[str, str]:
+    """Devolve (descrição sem o link, link). Sem link: (texto, '')."""
+    m = URL_RE.search(texto)
+    if not m:
+        return texto, ""
+    url = m.group(0).rstrip(PONTUACAO_FINAL)
+    if len(url) <= len("https://"):
+        return texto, ""
+    # Sai o link com a pontuação colada nele ("veja https://...)." vira "veja").
+    resto = texto[:m.start()] + " " + texto[m.end():]
+    return " ".join(resto.split()).strip(SEPARADORES + "([{"), url
+
+
+def link_sozinho(texto: str) -> str:
+    """O link, se a opção for só um link; senão ''."""
+    descricao, url = separar_link(texto)
+    return url if url and not descricao else ""
+
+
+def host_publico(host: str | None) -> bool:
+    """Só deixa o servidor buscar endereços públicos da internet (nunca a rede interna)."""
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
+    except (OSError, UnicodeError):
+        return False
+    return bool(infos) and all(ipaddress.ip_address(i[4][0].split("%")[0]).is_global for i in infos)
+
+
+def url_permitida(url: str) -> bool:
+    partes = urlsplit(url)
+    return partes.scheme == "https" and partes.port in (None, 443) and host_publico(partes.hostname)
+
+
+class _SoRedirecionaSeguro(urlreq.HTTPRedirectHandler):
+    max_redirections = 5
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not url_permitida(newurl):
+            raise OSError("redirecionamento recusado")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_abridor = urlreq.build_opener(_SoRedirecionaSeguro())
+
+
+class _LerTitulo(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.titulo = ""
+        self.og = ""
+        self._no_title = False
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "title" and not self.titulo:
+            self._no_title = True
+        elif tag == "meta" and not self.og:
+            if (a.get("property") or a.get("name") or "").lower() in ("og:title", "twitter:title"):
+                self.og = a.get("content") or ""
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self._no_title = False
+
+    def handle_data(self, data):
+        if self._no_title:
+            self.titulo += data
+
+
+def buscar_titulo(url: str) -> str:
+    """Título da página (og:title, senão <title>), ou '' se não deu."""
+    if not url_permitida(url):
+        return ""
+    req = urlreq.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (compatible; NatalEmFamilia/1.0; +link-preview)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "pt-BR,pt;q=0.9",
+    })
+    try:
+        with _abridor.open(req, timeout=6) as resp:
+            if "html" not in (resp.headers.get_content_type() or ""):
+                return ""
+            bruto = resp.read(LIMITE_PAGINA)
+            charset = resp.headers.get_content_charset()
+    except Exception:
+        return ""
+    if not charset:
+        m = re.search(rb"<meta[^>]+charset=[\"']?([\w-]+)", bruto[:4096], re.IGNORECASE)
+        charset = m.group(1).decode() if m else "utf-8"
+    try:
+        texto = bruto.decode(charset, errors="replace")
+    except LookupError:
+        texto = bruto.decode("utf-8", errors="replace")
+    leitor = _LerTitulo()
+    try:
+        leitor.feed(texto)
+    except Exception:
+        pass
+    titulo = " ".join(html.unescape(leitor.og or leitor.titulo).split())
+    return titulo[:150]
+
+
+def guardar_titulos(urls: list[str]) -> None:
+    """Roda em segundo plano: busca e guarda o título de cada link."""
+    for url in urls:
+        try:
+            titulo = buscar_titulo(url)
+            with closing(conectar()) as con, con:
+                con.execute(
+                    "INSERT OR REPLACE INTO titulos_link (url, titulo, buscado_em) VALUES (?, ?, ?)",
+                    (url, titulo, int(time.time())),
+                )
+        finally:
+            with _buscando_lock:
+                _buscando.discard(url)
+
+
+def titulos_para(con: sqlite3.Connection, rows: list[sqlite3.Row], tarefas: BackgroundTasks) -> dict[str, str | None]:
+    """Títulos já guardados dos links sozinhos dessas respostas; agenda a busca dos que faltam.
+    No resultado, None = ainda buscando; '' = não deu para pegar o título."""
+    urls = {u for r in rows for n in (1, 2, 3) if (u := link_sozinho(r[f"presente{n}"]))}
+    if not urls:
+        return {}
+    marcas = ",".join("?" * len(urls))
+    guardados = {
+        g["url"]: g for g in con.execute(f"SELECT * FROM titulos_link WHERE url IN ({marcas})", tuple(urls))
+    }
+    agora_s = int(time.time())
+    titulos: dict[str, str | None] = {}
+    buscar = []
+    for u in urls:
+        g = guardados.get(u)
+        if g and (g["titulo"] or agora_s - g["buscado_em"] < REBUSCAR_FALHA):
+            titulos[u] = g["titulo"]
+            continue
+        titulos[u] = g["titulo"] if g else None
+        with _buscando_lock:
+            if u not in _buscando:
+                _buscando.add(u)
+                buscar.append(u)
+    if buscar:
+        tarefas.add_task(guardar_titulos, buscar)
+    return titulos
 
 
 def agora() -> str:
@@ -416,11 +591,14 @@ def acesso(fid: str, request: Request) -> str:
     return fid
 
 
-def para_dict(row: sqlite3.Row) -> dict:
+def para_dict(row: sqlite3.Row, titulos: dict[str, str | None]) -> dict:
+    presentes = [row["presente1"], row["presente2"], row["presente3"]]
     return {
         "id": row["id"],
         "nome": row["nome"],
-        "presentes": [row["presente1"], row["presente2"], row["presente3"]],
+        "presentes": presentes,
+        # Título da página de cada opção que é só um link (None = ainda buscando).
+        "titulos": [titulos.get(link_sozinho(p), "") for p in presentes],
         "salgado": row["salgado"],
         "doce": row["doce"],
         "atualizado_em": row["atualizado_em"],
@@ -432,16 +610,17 @@ def valores(r: Resposta) -> tuple:
 
 
 @app.get("/api/f/{fid}/participantes")
-def listar(fid: str = Depends(acesso)) -> list[dict]:
+def listar(tarefas: BackgroundTasks, fid: str = Depends(acesso)) -> list[dict]:
     with closing(conectar()) as con:
         rows = con.execute(
             "SELECT * FROM participantes WHERE familia_id = ? ORDER BY nome_chave", (fid,)
         ).fetchall()
-    return [para_dict(r) for r in rows]
+        titulos = titulos_para(con, rows, tarefas)
+    return [para_dict(r, titulos) for r in rows]
 
 
 @app.post("/api/f/{fid}/participantes", status_code=201)
-def criar(r: Resposta, fid: str = Depends(acesso)) -> dict:
+def criar(r: Resposta, tarefas: BackgroundTasks, fid: str = Depends(acesso)) -> dict:
     with closing(conectar()) as con, con:
         existente = con.execute(
             "SELECT id FROM participantes WHERE familia_id = ? AND nome_chave = ?",
@@ -458,11 +637,12 @@ def criar(r: Resposta, fid: str = Depends(acesso)) -> dict:
             (fid, *valores(r)),
         )
         row = con.execute("SELECT * FROM participantes WHERE id = ?", (cur.lastrowid,)).fetchone()
-    return para_dict(row)
+        titulos = titulos_para(con, [row], tarefas)
+    return para_dict(row, titulos)
 
 
 @app.put("/api/f/{fid}/participantes/{pid}")
-def atualizar(pid: int, r: Resposta, fid: str = Depends(acesso)) -> dict:
+def atualizar(pid: int, r: Resposta, tarefas: BackgroundTasks, fid: str = Depends(acesso)) -> dict:
     with closing(conectar()) as con, con:
         if not con.execute(
             "SELECT 1 FROM participantes WHERE id = ? AND familia_id = ?", (pid, fid)
@@ -484,7 +664,8 @@ def atualizar(pid: int, r: Resposta, fid: str = Depends(acesso)) -> dict:
             (*valores(r), pid, fid),
         )
         row = con.execute("SELECT * FROM participantes WHERE id = ?", (pid,)).fetchone()
-    return para_dict(row)
+        titulos = titulos_para(con, [row], tarefas)
+    return para_dict(row, titulos)
 
 
 @app.delete("/api/f/{fid}/participantes/{pid}", status_code=204)

@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/estilo.css?v=3">
+<link rel="stylesheet" href="/static/estilo.css?v=4">
 </head>
 <body>
 
@@ -167,15 +167,23 @@
     return n;
   };
 
-  // Opção de presente que é um link: começa com https:// e é uma URL válida.
-  const linkHttps = (texto) => {
-    const t = (texto || "").trim();
-    if (!/^https:\/\/\S+$/i.test(t)) return null;
-    try { const u = new URL(t); return u.protocol === "https:" ? u : null; } catch { return null; }
+  // Link dentro de uma opção de presente: o primeiro https:// do texto.
+  // Devolve { descricao, url } (url = null se não houver link válido).
+  // A mesma regra existe em main.py (separar_link); mantenha as duas iguais.
+  const separarLink = (texto) => {
+    const t = texto || "";
+    const m = /https:\/\/[^\s<>"']+/i.exec(t);
+    if (!m) return { descricao: t, url: null };
+    const bruto = m[0].replace(/[.,;:!?)\]}\u00bb\u201d]+$/, "");
+    let url = null;
+    try { url = bruto.length > 8 ? new URL(bruto) : null; } catch { url = null; }
+    if (!url || url.protocol !== "https:") return { descricao: t, url: null };
+    const resto = (t.slice(0, m.index) + " " + t.slice(m.index + m[0].length)).split(/\s+/).join(" ");
+    return { descricao: resto.replace(/^[\s\-\u2013\u2014:|,;(\[{]+|[\s\-\u2013\u2014:|,;(\[{]+$/g, ""), url };
   };
   const atualizarLinks = () => {
     for (const n of [1, 2, 3]) {
-      const url = linkHttps($("presente" + n).value);
+      const { url } = separarLink($("presente" + n).value);
       const a = $("link" + n);
       a.hidden = !url;
       if (url) a.href = url.href; else a.removeAttribute("href");
@@ -183,6 +191,8 @@
   };
 
   let pessoas = [];
+  let timerTitulos;
+  let tentativasTitulo = 0;
   let carregou = false;
   let editandoId = null;   // id da resposta aberta no formulário
   let meuId = lerMeuId();
@@ -275,6 +285,7 @@
     );
 
     // Listas de desejos
+    let faltaTitulo = false;   // algum link ainda sem o título da página (o servidor está buscando)
     if (!pessoas.length) {
       const v = el("div", "estado");
       v.append(el("strong", null, "Ninguém respondeu ainda."), "Seja a primeira pessoa: toque em Incluir Resposta.");
@@ -295,18 +306,25 @@
         const itens = p.presentes.filter(Boolean);
         if (itens.length) {
           const ol = el("ol");
-          for (const t of itens) {
-            const url = linkHttps(t);
-            if (!url) { ol.append(el("li", null, t)); continue; }
+          p.presentes.forEach((t, i) => {
+            if (!t) return;
+            const { descricao, url } = separarLink(t);
+            if (!url) { ol.append(el("li", null, t)); return; }
+            const dominio = url.hostname.replace(/^www\./, "");
+            const titulo = p.titulos && p.titulos[i];
+            if (titulo === null) faltaTitulo = true;
             const li = el("li", "com-link");
-            li.append(el("span", "link-texto", url.hostname.replace(/^www\./, "")));
+            const texto = el("span", "link-texto");
+            if (descricao) texto.append(descricao);
+            else if (titulo) texto.append(titulo, el("small", null, dominio));
+            else texto.append(dominio);
             const a = el("a", "abrir-link", "Abrir");
             a.href = url.href; a.target = "_blank"; a.rel = "noopener noreferrer";
-            a.title = t;
-            a.setAttribute("aria-label", "Abrir o link de " + url.hostname + " em nova aba");
-            li.append(a);
+            a.title = url.href;
+            a.setAttribute("aria-label", "Abrir o link de " + (descricao || titulo || dominio) + " em nova aba");
+            li.append(texto, a);
             ol.append(li);
-          }
+          });
           cartao.append(ol);
         } else {
           cartao.append(el("p", "vazio-item", "Ainda não disse o que quer ganhar."));
@@ -314,6 +332,13 @@
         grade.append(cartao);
       }
       $("desejos").replaceChildren(grade);
+    }
+    // O título chega alguns segundos depois de salvar: recarrega sozinho poucas vezes.
+    clearTimeout(timerTitulos);
+    if (faltaTitulo && tentativasTitulo < 3) {
+      timerTitulos = setTimeout(() => { tentativasTitulo++; carregar(true); }, 4000);
+    } else if (!faltaTitulo) {
+      tentativasTitulo = 0;
     }
 
     // Mesa
@@ -446,6 +471,7 @@
         : await api("POST", BASE + "/participantes", corpo);
       if (!editandoId && !meuId) gravarMeuId(salvo.id);
       editandoId = salvo.id;
+      tentativasTitulo = 0;
       await carregar(true);
       if (!pessoas.some((p) => p.id === salvo.id)) pessoas.push(salvo);
       desenhar();
