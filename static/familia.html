@@ -122,9 +122,9 @@
     <section class="passo" aria-labelledby="t-presentes">
       <div class="passo-titulo"><span class="passo-num" aria-hidden="true">1</span><h3 id="t-presentes">Amigo oculto</h3></div>
       <p class="dica">Três opções de presente, da que você mais quer para a que menos quer.</p>
-      <div class="presente"><span aria-hidden="true">1</span><input type="text" class="entrada" id="presente1" maxlength="500" aria-label="Primeira opção de presente" placeholder="Ex.: livro de receitas"><a class="abrir-link" id="link1" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 1 em nova aba</span></a></div>
-      <div class="presente"><span aria-hidden="true">2</span><input type="text" class="entrada" id="presente2" maxlength="500" aria-label="Segunda opção de presente" placeholder="Ex.: chinelo tamanho 39"><a class="abrir-link" id="link2" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 2 em nova aba</span></a></div>
-      <div class="presente"><span aria-hidden="true">3</span><input type="text" class="entrada" id="presente3" maxlength="500" aria-label="Terceira opção de presente" placeholder="Ex.: caneca térmica"><a class="abrir-link" id="link3" target="_blank" rel="noopener noreferrer" hidden>Abrir<span class="so-leitor"> o link da opção 3 em nova aba</span></a></div>
+      <div class="presente"><span aria-hidden="true">1</span><input type="text" class="entrada" id="presente1" maxlength="500" aria-label="Primeira opção de presente" placeholder="Ex.: livro de receitas"><a class="abrir-link" id="link1" target="_blank" rel="noopener noreferrer" hidden>Ver<span class="so-leitor"> o link da opção 1 em nova aba</span></a></div>
+      <div class="presente"><span aria-hidden="true">2</span><input type="text" class="entrada" id="presente2" maxlength="500" aria-label="Segunda opção de presente" placeholder="Ex.: chinelo tamanho 39"><a class="abrir-link" id="link2" target="_blank" rel="noopener noreferrer" hidden>Ver<span class="so-leitor"> o link da opção 2 em nova aba</span></a></div>
+      <div class="presente"><span aria-hidden="true">3</span><input type="text" class="entrada" id="presente3" maxlength="500" aria-label="Terceira opção de presente" placeholder="Ex.: caneca térmica"><a class="abrir-link" id="link3" target="_blank" rel="noopener noreferrer" hidden>Ver<span class="so-leitor"> o link da opção 3 em nova aba</span></a></div>
     </section>
 
     <section class="passo" aria-labelledby="t-comida">
@@ -318,10 +318,10 @@
             if (descricao) texto.append(descricao);
             else if (titulo) texto.append(titulo, el("small", null, dominio));
             else texto.append(dominio);
-            const a = el("a", "abrir-link", "Abrir");
+            const a = el("a", "abrir-link", "Ver");
             a.href = url.href; a.target = "_blank"; a.rel = "noopener noreferrer";
             a.title = url.href;
-            a.setAttribute("aria-label", "Abrir o link de " + (descricao || titulo || dominio) + " em nova aba");
+            a.setAttribute("aria-label", "Ver o link de " + (descricao || titulo || dominio) + " em nova aba");
             li.append(texto, a);
             ol.append(li);
           });
